@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bot, Minus, Send, Sparkles } from 'lucide-react';
+import { Bot, Minus, RotateCcw, Send, Sparkles } from 'lucide-react';
 import { cn } from 'cn';
 
 import { WELCOME_MESSAGE, useChatStore } from '@/app/store/chat';
-import { askAssistant, getSuggestions } from '@/services/ai';
+import { askAssistant, getSuggestions, ASSISTANT_PROVIDER } from '@/services/ai';
 import { usePortalAuth } from '@/hooks/use-portal-auth';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,9 @@ export function AssistantWidget() {
   const setPending = useChatStore((s) => s.setPending);
 
   const [input, setInput] = useState('');
+  const [liveMode, setLiveMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inFlight = useRef(false);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -37,12 +39,20 @@ export function AssistantWidget() {
 
   async function submit(content: string) {
     const trimmed = content.trim();
-    if (!trimmed || pending) return;
+    if (!trimmed || pending || inFlight.current) return;
+    inFlight.current = true;
     setInput('');
     setPending(true);
 
-    const result = await askAssistant({ message: trimmed, role, section });
-    send(trimmed, result.reply);
+    try {
+      const result = await askAssistant({ message: trimmed, role, section });
+      // Only commit when the conversation wasn't cleared while waiting.
+      if (!useChatStore.getState().pending) return;
+      if (result.provider !== ASSISTANT_PROVIDER) setLiveMode(true);
+      send(trimmed, result.reply);
+    } finally {
+      inFlight.current = false;
+    }
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -53,7 +63,7 @@ export function AssistantWidget() {
   const showSuggestions = messages.length === 0 && !pending;
 
   return (
-    <div className="fixed right-4 bottom-4 z-40 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6">
+    <div className="fixed right-4 bottom-20 z-40 flex flex-col items-end gap-3 sm:right-6 lg:bottom-4">
       {open ? (
         <section
           aria-label="Mr. Damith assistant"
@@ -70,16 +80,23 @@ export function AssistantWidget() {
             <div className="min-w-0 flex-1">
               <p className="text-sm leading-tight font-semibold">Mr. Damith</p>
               <p className="truncate text-xs text-primary-foreground/70">
-                {pending ? 'Thinking…' : 'Online · demo mode'}
+                {pending ? 'Thinking…' : liveMode ? 'Online' : 'Online · demo mode'}
               </p>
             </div>
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={() => {
-                setOpen(false);
-                clear();
-              }}
+              onClick={() => clear()}
+              disabled={pending}
+              className="text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
+              aria-label="Start a new chat"
+            >
+              <RotateCcw className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setOpen(false)}
               className="text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
               aria-label="Minimise assistant"
             >

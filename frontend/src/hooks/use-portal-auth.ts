@@ -37,12 +37,14 @@ function toInitials(nameOrEmail: string): string {
  *  there is no real session, so the persisted demo persona drives this; when a
  *  real session exists it takes precedence. */
 export function usePortalAuth(): PortalAuthValue {
-  const { role: authRole, refreshRole, signOut } = useAuth();
+  const { role: authRole, user, refreshRole, signOut } = useAuth();
   const persona = useDemoSession((s) => s.persona);
   const clearPersona = useDemoSession((s) => s.clear);
 
   const role: RoleKey = authRole ?? persona?.role ?? RoleKeys.STUDENT;
-  const email = persona?.email ?? FALLBACK_EMAIL;
+  // A real session's identity takes precedence; the demo persona is only used
+  // in template mode when there is no Supabase session.
+  const email = user?.email ?? persona?.email ?? FALLBACK_EMAIL;
   const displayName = persona?.name ?? (email !== '' ? email : FALLBACK_DISPLAY_NAME);
   const initials = toInitials(displayName);
   const badge = getRoleBadgeMeta(role);

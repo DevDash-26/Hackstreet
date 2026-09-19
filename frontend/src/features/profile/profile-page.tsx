@@ -248,12 +248,32 @@ function ProfileSectionCard({
     return values;
   });
   const [saved, setSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const Icon = section.icon;
   const setValue = (key: string, value: string) => setDraft((prev) => ({ ...prev, [key]: value }));
-  const dirty = section.fields.some((field) => draft[field.key] !== (initial[field.key] ?? ''));
+
+  // Password fields are demo-only and never persisted, so they must not enable
+  // "Save" on their own — otherwise we'd claim success while dropping input.
+  const persistableDirty = section.fields.some(
+    (field) => isPersistable(field) && (draft[field.key] ?? '') !== (initial[field.key] ?? ''),
+  );
+  const passwordEntered = section.fields.some(
+    (field) => field.kind === 'password' && (draft[field.key] ?? '').length > 0,
+  );
 
   const handleSave = () => {
+    const newPassword = draft.newPassword?.trim() ?? '';
+    const confirmPassword = draft.confirmPassword?.trim() ?? '';
+    if (newPassword.length > 0 && newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New password and confirmation do not match.');
+      return;
+    }
+    setPasswordError(null);
     const patch: FieldDict = {};
     for (const field of section.fields) {
       if (!isPersistable(field)) continue;
@@ -268,6 +288,7 @@ function ProfileSectionCard({
     const values: FieldDict = {};
     for (const field of section.fields) values[field.key] = initial[field.key] ?? '';
     setDraft(values);
+    setPasswordError(null);
   };
 
   return (
@@ -304,12 +325,29 @@ function ProfileSectionCard({
 
       {section.sessions ? <CardContent><ActiveSessionsList sessions={section.sessions} /></CardContent> : null}
 
+      {passwordError !== null ? (
+        <CardContent className="pt-0">
+          <p className="text-sm font-medium text-destructive" role="alert">
+            {passwordError}
+          </p>
+        </CardContent>
+      ) : null}
+
+      {passwordEntered ? (
+        <CardContent className="pt-0">
+          <p className="text-xs text-muted-foreground">
+            Password changes aren&rsquo;t persisted in this demo — they&rsquo;re validated here but
+            only saved once a real auth backend is wired.
+          </p>
+        </CardContent>
+      ) : null}
+
       <CardContent className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
-        <Button onClick={handleSave} disabled={!dirty}>
+        <Button onClick={handleSave} disabled={!persistableDirty}>
           <Check />
           Save changes
         </Button>
-        <Button variant="ghost" onClick={handleReset} disabled={!dirty}>
+        <Button variant="ghost" onClick={handleReset} disabled={!persistableDirty && !passwordEntered}>
           <RotateCcw />
           Revert
         </Button>

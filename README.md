@@ -28,7 +28,7 @@ is the optional production backend.
 | Content sections       | 30+ sections backed by `features/sections/data.ts` (feeds, tags, meta, actions) |
 | Room booking (BR8)     | Interactive booking grid with validation, persisted to localStorage             |
 | Profile editing        | Per-persona profile manager with role-specific sections and per-persona saves   |
-| AI assistant (BR33)    | "Mr. Damith" chat widget with role-aware suggestions and campus floor map       |
+| AI assistant (BR33)    | "Mr. Damith" chat widget: live model when configured, mock fallback, campus floor map |
 | Admin tools            | Finance analytics, WhatsApp targeted-message composer, notification centre      |
 | Onboarding (BR14)      | Goal-gradient setup checklist                                                   |
 | Theming                | Light / dark / system theme with persisted preference                           |
@@ -59,8 +59,8 @@ university-portal/
 
 - **Frontend** is a feature-based SPA. Routing lives in `app/router`, role-aware
   layout in `components/layout`, and business data in `features/<domain>/`.
-- **Backend** is a stateless Express service exposing `GET /api/v1/health`. It is a
-  deliberate seam: feature routers can be mounted under `backend/src/` as the
+- **Backend** is a stateless Express service exposing `GET /api/v1/health` and
+  `POST /api/v1/assistant` (AI assistant, optional). It is a deliberate seam: feature routers can be mounted under `backend/src/` as the
   hosted (service-role) surface grows.
 - **Shared** is built to `dist/` before the other workspaces typecheck or run.
 
@@ -93,10 +93,14 @@ Frontend (`frontend/.env.local`, optional — falls back to demo mode):
 
 Backend (`backend/.env`, optional):
 
-| Variable   | Description           |
-| ---------- | --------------------- |
-| `NODE_ENV` | Default `development` |
-| `PORT`     | Default `4000`        |
+| Variable           | Description                                                                  |
+| ------------------ | ---------------------------------------------------------------------------- |
+| `NODE_ENV`         | Default `development`                                                        |
+| `PORT`             | Default `4000`                                                               |
+| `AI_API_KEY`       | Provider API key (empty = canned frontend mock is used)                      |
+| `AI_PROVIDER_URL`  | OpenAI-compatible base URL; default Groq `https://api.groq.com/openai/v1`    |
+| `AI_MODEL`         | Model to call, default `llama-3.3-70b-versatile` (Groq free tier)            |
+| `AI_TIMEOUT_MS`    | Provider call timeout, default `15000`                                       |
 
 `.env*` files are gitignored; only `.env.example` files are committed. Run
 `npm run check:env` to print the resolved configuration.
@@ -155,14 +159,15 @@ and a dev-server smoke test of `/` and the public assets.
 
 ## 11. Known limitations
 
-- The AI assistant (`frontend/src/services/ai.ts`) is a deterministic mock with
-  canned, keyword-driven answers — including the University College Sri Lanka floor
-  map — and the conversation resets to the welcome message when the widget is
-  closed. Wire a provider by replacing the function body.
+- The AI assistant calls the backend (`POST /api/v1/assistant`), which forwards to a
+  configurable OpenAI-compatible provider with the key kept server-side. Without a
+  key it falls back to the canned, keyword-driven mock (including the University
+  College Sri Lanka floor map). The conversation resets to the welcome message when
+  the widget is closed.
 - Profile edits persist to `localStorage` per persona; closing the assistant
   clears its chat history.
 - WhatsApp delivery (`frontend/src/services/whatsapp.ts`) is a stub.
 - Business requirements are demonstrated with client-side mock data; a subset maps
   to the Supabase `announcements` table.
-- The backend exposes only a health endpoint; service-role write paths are not yet
-  implemented.
+- The backend exposes a health endpoint and the optional AI assistant endpoint;
+  service-role write paths are not yet implemented.

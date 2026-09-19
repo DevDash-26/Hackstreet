@@ -37,7 +37,7 @@ const DEMO_ACTIONS: DemoAction[] = [
     tone: 'ok',
     title: 'Software Engineering',
     value: 'Assignment 2 due Today',
-    hint: ':55pm · Submit now',
+    hint: '17:55pm · Submit now',
   },
   {
     icon: Clock,
@@ -224,7 +224,7 @@ export function PortalPage() {
               Welcome back
             </Badge>
             <p className="font-heading text-base font-medium">
-              Final year is in full swing - keep an eye on your deadlines and lecture schedule
+              You&rsquo;re in your second year - keep an eye on your deadlines and lecture schedule
               below.
             </p>
           </div>

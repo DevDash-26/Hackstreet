@@ -20,6 +20,10 @@ const AUDIENCES: Array<{ value: NotificationAudience; label: string }> = [
   { value: 'staff', label: 'Staff' },
 ];
 
+function audienceLabel(value: NotificationAudience): string {
+  return AUDIENCES.find((entry) => entry.value === value)?.label ?? value;
+}
+
 export function AdminNotificationComposer() {
   const send = useNotificationsStore((state) => state.send);
   const notifications = useNotificationsStore((state) => state.notifications);
@@ -69,7 +73,8 @@ export function AdminNotificationComposer() {
           Send a WhatsApp notification
         </CardTitle>
         <CardDescription>
-          Compose a broadcast. Students see these instantly in their portal notification bell.
+          Compose a broadcast for this demo. WhatsApp delivery is stubbed locally &mdash; the
+          notification is saved to this device so you can preview the admin flow.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -121,7 +126,7 @@ export function AdminNotificationComposer() {
         ) : null}
         {sent ? (
           <p className="text-sm font-medium text-success" role="status">
-            Notification queued and delivered to {audience} via WhatsApp.
+            Notification queued for {audienceLabel(audience)} (demo preview on this device).
           </p>
         ) : null}
 

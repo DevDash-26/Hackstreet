@@ -86,20 +86,30 @@ export function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<DemoRole | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [signInError, setSignInError] = useState<string | null>(null);
 
   const pickRole = (role: DemoRole) => {
     setSelectedRole(role);
     setEmail(role.email);
     setPassword(role.password);
+    setSignInError(null);
   };
 
   const handleSignIn = (event: React.FormEvent) => {
     event.preventDefault();
     if (selectedRole === null) return;
-    // Template mode: store the demo persona so the portal renders the right
-    // role-aware dashboard. Swap for supabase.auth.signInWithPassword later.
-    void password;
-    void email;
+    // Template mode: validate against the demo persona so the form is honest, then
+    // store the persona so the portal renders the right role-aware dashboard.
+    // Swap for supabase.auth.signInWithPassword later.
+    if (email.trim().toLowerCase() !== selectedRole.email.toLowerCase()) {
+      setSignInError(`That email doesn't match the ${selectedRole.label} demo account.`);
+      return;
+    }
+    if (password !== selectedRole.password) {
+      setSignInError('Incorrect password. Every demo role signs in with demo1234.');
+      return;
+    }
+    setSignInError(null);
     signInAs({ role: selectedRole.role, name: selectedRole.name, email: selectedRole.email });
     navigate('/portal');
   };
@@ -254,7 +264,10 @@ export function LoginPage() {
                         type="email"
                         autoComplete="username"
                         value={email}
-                        onChange={(event) => setEmail(event.target.value)}
+                        onChange={(event) => {
+                          setEmail(event.target.value);
+                          setSignInError(null);
+                        }}
                         className="pl-8"
                         placeholder="you@ucl.ac.lk"
                       />
@@ -267,7 +280,7 @@ export function LoginPage() {
                       <KeyRound className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="password"
-                        type="text"
+                        type="password"
                         autoComplete="current-password"
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
@@ -275,6 +288,12 @@ export function LoginPage() {
                       />
                     </div>
                   </div>
+
+                  {signInError !== null ? (
+                    <p className="text-sm font-medium text-destructive" role="alert">
+                      {signInError}
+                    </p>
+                  ) : null}
 
                   <Button type="submit" size="lg" className="mt-2 w-full">
                     Sign in

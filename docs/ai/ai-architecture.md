@@ -1,10 +1,15 @@
 # AI Assistant Architecture
 
-> The AI Assistant (BR33) is implemented as a **deterministic mock** today:
-> `frontend/src/services/ai.ts` classifies intent by keyword and returns canned,
-> role-aware answers through `features/assistant/assistant-widget.tsx`. This
-> document records that shape plus the intended hosted architecture so a real
-> provider can be dropped in without UI changes.
+> The AI Assistant (BR33) has a two-tier implementation:
+>
+> 1. **Live provider path** — the frontend calls `POST /api/v1/assistant`, which
+>    the backend forwards to a configurable OpenAI-compatible chat-completions
+>    endpoint. The API key stays server-side.
+> 2. **Deterministic mock fallback** — when the backend has no key configured or is
+>    unreachable, `frontend/src/services/ai.ts` classifies intent by keyword and
+>    returns canned, role-aware answers.
+>
+> The UI (`features/assistant/assistant-widget.tsx`) never changes between the two.
 
 ## Goals
 
@@ -22,12 +27,48 @@ app/store/chat.ts          Persisted conversation store
 services/ai.ts             askAssistant({ message, role, section }) — provider seam
 ```
 
-`askAssistant` is the only integration point. It currently resolves after a short
-delay with a keyword-matched answer and role-aware suggestions. To use a real
-provider, replace the function body with a call to a backend AI endpoint using the
-user's access token — the UI never holds an LLM/provider key.
+`askAssistant` is the only integration point. It first attempts
+`API_PREFIX + '/assistant'` with an 8s timeout; on any non-OK / failure it falls
+back to a local keyword-matched answer after a short delay. The UI never holds an
+LLM/provider key.
 
-## Backend — planned `ai` module
+## Backend — `routes/ai.ts` + `services/ai-provider.ts`
+
+```
+src/
+├── routes/ai.ts                  POST /assistant — validate body, stream to provider
+└── services/
+    ├── ai-provider.ts            OpenAI-compatible /chat/completions client (fetch)
+    └── ai-prompt.ts              System prompt: role + portal features + campus floor map
+```
+
+### Request / response
+
+```jsonc
+POST /api/v1/assistant
+{ "message": "wherez the libary", "role": "student", "section": "campus" }
+
+200 { "reply": "The library is on the 1st floor…", "provider": "llama-3.3-70b-versatile", "configured": true }
+503 { "error": "AI assistant is not configured on the server", "provider": "unconfigured" }  // no AI_API_KEY
+502 { "error": "<provider message>", "provider": "unavailable" }                              // upstream failure
+400 { "error": "Invalid request", "details": … }                                              // bad body
+```
+
+### Configuration (backend env)
+
+| Variable           | Default                                   |
+| ------------------ | ----------------------------------------- |
+| `AI_API_KEY`       | `''` (empty → mock fallback)              |
+| `AI_PROVIDER_URL`  | `https://api.groq.com/openai/v1`          |
+| `AI_MODEL`         | `llama-3.3-70b-versatile` (Groq free tier)|
+| `AI_TIMEOUT_MS`    | `15000`                                   |
+
+Any OpenAI-compatible base URL works (Groq, OpenAI, Google Gemini in OpenAI mode,
+Ollama, LM Studio…). System prompt grounds the model in the portal feature list
+and the University College Sri Lanka floor map, so misspelled free-text questions
+still get in-context replies.
+
+## Backend — planned `ai` module (retrieval + citations)
 
 ```
 ai/

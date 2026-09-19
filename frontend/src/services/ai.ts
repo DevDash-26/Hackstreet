@@ -1,19 +1,19 @@
 /**
  * AI Assistant gateway.
  *
- * STUB: there is no backend yet, so this returns canned demo replies with
- * simulated latency. To wire a real provider later (e.g. Groq, OpenAI, or
- * Gemini — all expose an OpenAI-compatible chat-completions endpoint),
- * replace the body of `askAssistant` with your fetch call. The rest of the
- * app only depends on this function's shape.
+ * Tries the live backend endpoint (`POST /api/v1/assistant`), which calls an
+ * OpenAI-compatible provider (Groq/OpenAI/Gemini/Ollama) with the API key kept
+ * server-side. When the backend has no key configured (or is offline) it falls
+ * back to canned, keyword-matched demo replies so the app still works offline.
  */
 
 import { RoleKeys, type RoleKey } from 'shared';
+import { API_PREFIX } from 'shared';
 
 export interface AssistantRequest {
   /** Free-text question from the user. */
   message: string;
-  /** Current role, used to tailor canned replies. */
+  /** Current role, used to tailor replies. */
   role: RoleKey;
   /** Current portal section slug (e.g. "bookings"), for context. */
   section?: string;
@@ -26,26 +26,45 @@ export interface AssistantResult {
 
 export const ASSISTANT_PROVIDER = 'mock';
 
-const ROLE_LABEL: Record<RoleKey, string> = {
-  [RoleKeys.STUDENT]: 'student',
-  [RoleKeys.STAFF_ACADEMIC]: 'academic staff member',
-  [RoleKeys.STAFF_SOCIETY]: 'society staff member',
-  [RoleKeys.ADMIN]: 'administrator',
-  [RoleKeys.PARENT]: 'parent',
-};
+/** Try the live backend endpoint; return null when unavailable/not configured. */
+async function fetchLiveAssistant(request: AssistantRequest): Promise<AssistantResult | null> {
+  const controller = new AbortController();
+  // Must exceed the backend's AI_TIMEOUT_MS (default 15000) so a slow but valid
+  // provider response is not cut short and silently replaced by the mock.
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch(`${API_PREFIX}/assistant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: request.message,
+        role: request.role,
+        section: request.section ?? 'portal',
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as { reply?: unknown; provider?: unknown; configured?: unknown };
+    if (typeof data.reply !== 'string' || data.reply === '') return null;
+    return {
+      reply: data.reply,
+      provider: typeof data.provider === 'string' ? data.provider : ASSISTANT_PROVIDER,
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function askAssistant(request: AssistantRequest): Promise<AssistantResult> {
-  await new Promise((resolve) => setTimeout(resolve, 900));
+  // Prefer a real model when the backend is configured and reachable.
+  const live = await fetchLiveAssistant(request);
+  if (live !== null) return live;
 
-  // const url = `${API_PREFIX}/assistant`;
-  // const res = await fetch(url, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(request),
-  // });
-
+  // Fallback: deterministic local mock (works with no key / offline).
+  await new Promise((resolve) => setTimeout(resolve, 600));
   const topic = detectTopic(request.message);
-
   return {
     reply: buildCannedReply(request, topic),
     provider: ASSISTANT_PROVIDER,
@@ -88,9 +107,58 @@ const LOCATIONS: Array<[string, string]> = [
   ['class', 'IT classes run on the 4th floor'],
 ];
 
+/** Edit distance between two words (Levenshtein). */
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  const prev = new Array(b.length + 1).fill(0).map((_, i) => i);
+  const row = new Array(b.length + 1);
+  for (let i = 1; i <= a.length; i++) {
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    for (let j = 0; j <= b.length; j++) prev[j] = row[j];
+  }
+  return prev[b.length];
+}
+
+/** Worst-case typos allowed in a keyword of this length. Short words match exactly. */
+function maxEdits(keyword: string): number {
+  if (keyword.length <= 2) return 0;
+  if (keyword.length <= 5) return 1;
+  if (keyword.length <= 8) return 2;
+  return 3;
+}
+
+/**
+ * True when `text` contains a close (typo-tolerant) match of `phrase`.
+ * Each phrase word may differ from its best text word by up to maxEdits, and
+ * the total spoken-word distance across the phrase stays within a small budget.
+ */
+function fuzzyContains(text: string, phrase: string): boolean {
+  const textWords = text.toLowerCase().split(/\s+/);
+  const phraseWords = phrase.toLowerCase().split(/\s+/);
+  if (phraseWords.length > textWords.length) return false;
+  const budget = Math.max(phraseWords.length, 2);
+  for (let i = 0; i <= textWords.length - phraseWords.length; i++) {
+    let edits = 0;
+    let ok = true;
+    for (let j = 0; j < phraseWords.length; j++) {
+      const distance = levenshtein(textWords[i + j], phraseWords[j]);
+      if (distance > maxEdits(phraseWords[j])) {
+        ok = false;
+        break;
+      }
+      edits += distance;
+    }
+    if (ok && edits <= budget) return true;
+  }
+  return false;
+}
+
 function findLocation(text: string): string | undefined {
   for (const [keyword, answer] of LOCATIONS) {
-    if (text.includes(keyword)) return answer;
+    if (fuzzyContains(text, keyword)) return answer;
   }
   return undefined;
 }
@@ -109,9 +177,17 @@ function campusDirectionsReply(message: string): string {
 
 /** Match "…floor" references so we can also answer direct floor questions. */
 function findFloor(text: string): string | undefined {
-  const line = CAMPUS_LAYOUT.find(([floor]) => text.includes(floor.toLowerCase()));
+  const line = CAMPUS_LAYOUT.find(([floor]) => fuzzyContains(text, floor));
   return line === undefined ? undefined : `${line[0]} holds ${line[1]}`;
 }
+
+const ROLE_LABEL: Record<RoleKey, string> = {
+  [RoleKeys.STUDENT]: 'student',
+  [RoleKeys.STAFF_ACADEMIC]: 'academic staff member',
+  [RoleKeys.STAFF_SOCIETY]: 'society staff member',
+  [RoleKeys.ADMIN]: 'administrator',
+  [RoleKeys.PARENT]: 'parent',
+};
 
 /** Loose keyword match to pick a relevant demo answer. */
 function detectTopic(message: string): string {
@@ -134,7 +210,7 @@ function detectTopic(message: string): string {
     'where are the',
     'where is',
   ];
-  if (directionPhrases.some((phrase) => text.includes(phrase))) return 'directions';
+  if (directionPhrases.some((phrase) => fuzzyContains(text, phrase))) return 'directions';
 
   const topics: Array<[string, string[]]> = [
     [
@@ -156,7 +232,7 @@ function detectTopic(message: string): string {
     ['notifications', ['notification', 'announce', 'whatsapp', 'alert', 'news']],
   ];
   for (const [name, words] of topics) {
-    if (words.some((w) => text.includes(w))) return name;
+    if (words.some((w) => text.includes(w) || fuzzyContains(text, w))) return name;
   }
 
   // Mentions of a known campus facility (library, counselling, engineering lab…)

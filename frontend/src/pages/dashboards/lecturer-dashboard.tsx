@@ -27,7 +27,7 @@ const DEMO_STATS: DemoStat[] = [
   { icon: BookOpen, label: 'Modules this term', value: '3', hint: '24 teaching weeks' },
   { icon: UsersRound, label: 'Total students', value: '148', hint: 'Across all modules' },
   { icon: ClipboardList, label: 'Awaiting marking', value: '23', hint: '4 submissions overdue' },
-  { icon: CalendarDays, label: 'Office hours', value: 'Wed 2–4pm', hint: 'Room CSE 340' },
+  { icon: CalendarDays, label: 'Office hours', value: 'Wed 2–4pm', hint: 'Room CSE 305' },
 ];
 
 interface DemoClass {

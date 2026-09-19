@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { usePortalAuth } from '@/hooks/use-portal-auth';
 
 interface DemoStat {
   icon: LucideIcon;
@@ -137,12 +138,13 @@ const GRADE_TONE: Record<DemoGrade['tone'], string> = {
 };
 
 export function ParentDashboard() {
+  const { displayName } = usePortalAuth();
   return (
     <div className="flex flex-col gap-6">
       {/* Greeting */}
       <div className="flex flex-col gap-1">
         <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">
-          Good morning, Kamala 👋
+          Good morning, {displayName.split(' ')[0]} 👋
         </h1>
         <p className="text-sm text-muted-foreground">
           {new Date().toLocaleDateString('en-GB', {
@@ -151,7 +153,7 @@ export function ParentDashboard() {
             month: 'long',
             year: 'numeric',
           })}{' '}
-          · Ward: Nimal Perera · Year 4, BSc Computer Science
+          · Ward: Nimal Perera · Year 2, BSc Software Engineering
         </p>
       </div>
 

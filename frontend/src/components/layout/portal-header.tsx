@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -71,7 +72,7 @@ export function PortalHeader({ onMenuClick, onSearchClick }: PortalHeaderProps) 
           </Button>
           <ThemeToggle />
 
-          <DropdownMenu onOpenChange={(open) => void (open && markAllRead())}>
+          <DropdownMenu onOpenChange={(open) => void (!open && markAllRead())}>
             <DropdownMenuTrigger
               render={
                 <Button variant="ghost" size="icon" aria-label={`Notifications (${unread} unread)`}>
@@ -85,12 +86,14 @@ export function PortalHeader({ onMenuClick, onSearchClick }: PortalHeaderProps) 
               }
             />
             <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel className="flex items-center justify-between">
-                Notifications
-                <Badge variant="secondary" className="h-5">
-                  {unread} new
-                </Badge>
-              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  Notifications
+                  <Badge variant="secondary" className="h-5">
+                    {unread} new
+                  </Badge>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               {notifications.length === 0 ? (
                 <DropdownMenuItem className="flex-col items-start">
@@ -140,16 +143,18 @@ export function PortalHeader({ onMenuClick, onSearchClick }: PortalHeaderProps) 
               }
             />
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium text-foreground">{displayName}</span>
-                <span className="text-xs">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${badge.className}`}
-                  >
-                    {badge.label}
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-foreground">{displayName}</span>
+                  <span className="text-xs">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${badge.className}`}
+                    >
+                      {badge.label}
+                    </span>
                   </span>
-                </span>
-              </DropdownMenuLabel>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>

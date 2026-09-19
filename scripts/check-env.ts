@@ -4,7 +4,14 @@ import { join } from 'node:path';
 const BACKEND_ENV_PATH = join(process.cwd(), 'backend', '.env');
 const FRONTEND_ENV_PATH = join(process.cwd(), 'frontend', '.env.local');
 
-const BACKEND_KEYS = ['NODE_ENV', 'PORT'];
+const BACKEND_KEYS = [
+  'NODE_ENV',
+  'PORT',
+  'AI_API_KEY',
+  'AI_PROVIDER_URL',
+  'AI_MODEL',
+  'AI_TIMEOUT_MS',
+];
 const FRONTEND_KEYS = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'];
 
 function loadEnvFile(filePath: string): Record<string, string> {
