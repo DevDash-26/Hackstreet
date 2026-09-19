@@ -52,9 +52,90 @@ export async function askAssistant(request: AssistantRequest): Promise<Assistant
   };
 }
 
+/** University College Sri Lanka building layout, floor by floor. */
+const CAMPUS_LAYOUT: Array<[string, string]> = [
+  ['Basement', 'student lobby'],
+  ['Main floor', 'reception, counselling rooms and financial support'],
+  ['1st floor', 'student administrator, library and auditoriums'],
+  ['2nd floor', 'business studies floor and vending machines'],
+  ['3rd floor', 'engineering labs'],
+  ['4th floor', 'IT labs and classes'],
+  ['5th floor', 'staff rooms, CEO & Dean offices and meeting rooms'],
+];
+
+function layoutSummary(): string {
+  return CAMPUS_LAYOUT.map(([floor, facilities]) => `${floor} — ${facilities}`).join('\n');
+}
+
+/** Keyword → floor/service answer for "where is…" type questions. */
+const LOCATIONS: Array<[string, string]> = [
+  ['vending', 'the vending machines are on the 2nd floor with the business studies floor'],
+  ['counsel', 'the counselling rooms are on the main floor'],
+  ['reception', 'reception is on the main floor'],
+  ['financial', 'student financial support is on the main floor'],
+  ['lobby', 'the student lobby is in the basement'],
+  ['administrator', 'the student administrator is on the 1st floor'],
+  ['library', 'the library is on the 1st floor, alongside the auditoriums'],
+  ['auditorium', 'the auditoriums are on the 1st floor with the library'],
+  ['business', 'the business studies floor is on the 2nd floor'],
+  ['engineering lab', 'the engineering labs are on the 3rd floor'],
+  ['computer lab', 'the IT labs are on the 4th floor, with the IT classes'],
+  ['it lab', 'the IT labs are on the 4th floor, with the IT classes'],
+  ['staff room', 'the staff rooms are on the 5th floor'],
+  ['meeting room', 'the meeting rooms are on the 5th floor, next to the CEO & Dean offices'],
+  ['ceo', 'the CEO office is on the 5th floor'],
+  ['dean', "the Dean's office is on the 5th floor"],
+  ['class', 'IT classes run on the 4th floor'],
+];
+
+function findLocation(text: string): string | undefined {
+  for (const [keyword, answer] of LOCATIONS) {
+    if (text.includes(keyword)) return answer;
+  }
+  return undefined;
+}
+
+function campusDirectionsReply(message: string): string {
+  const hit = findLocation(message.toLowerCase());
+  const floor = findFloor(message.toLowerCase());
+  if (hit !== undefined) {
+    return `Good question — ${hit}.\n\nHere is the full University College Sri Lanka layout:\n${layoutSummary()}`;
+  }
+  if (floor !== undefined) {
+    return `${floor}.\n\nFull layout:\n${layoutSummary()}`;
+  }
+  return `Here is the University College Sri Lanka building layout:\n${layoutSummary()}`;
+}
+
+/** Match "…floor" references so we can also answer direct floor questions. */
+function findFloor(text: string): string | undefined {
+  const line = CAMPUS_LAYOUT.find(([floor]) => text.includes(floor.toLowerCase()));
+  return line === undefined ? undefined : `${line[0]} holds ${line[1]}`;
+}
+
 /** Loose keyword match to pick a relevant demo answer. */
 function detectTopic(message: string): string {
   const text = message.toLowerCase();
+
+  // Location-intent phrases are resolved with the campus floor map.
+  const directionPhrases = [
+    'which floor',
+    'what floor',
+    'on which floor',
+    'what is on',
+    'campus map',
+    'building layout',
+    'how do i find',
+    'where do i find',
+    'where can i find',
+    'where is the',
+    'where the',
+    "where's the",
+    'where are the',
+    'where is',
+  ];
+  if (directionPhrases.some((phrase) => text.includes(phrase))) return 'directions';
+
   const topics: Array<[string, string[]]> = [
     [
       'academicSupport',
@@ -77,6 +158,11 @@ function detectTopic(message: string): string {
   for (const [name, words] of topics) {
     if (words.some((w) => text.includes(w))) return name;
   }
+
+  // Mentions of a known campus facility (library, counselling, engineering lab…)
+  // resolve to its floor even without a location phrase.
+  if (findLocation(text) !== undefined) return 'directions';
+
   return 'general';
 }
 
@@ -126,6 +212,7 @@ function buildCannedReply(request: AssistantRequest, topic: string): string {
     support:
       'For IT help, open IT & Tech Support and raise a ticket, or check the FAQ section for ' +
       'password, Wi-Fi and printing answers. The helpdesk is in the CSE Block (Mon–Fri).',
+    directions: campusDirectionsReply(request.message),
     notifications:
       'Official announcements appear in your notification bell (top-right), including ' +
       'messages sent over WhatsApp, plus the Announcements section. Urgent notices land here.',
@@ -147,15 +234,15 @@ export function getSuggestions(role: RoleKey): Suggestion[] {
   if (role === RoleKeys.ADMIN) {
     return [
       { label: 'Send an announcement', query: 'How do I send an announcement to students?' },
+      { label: 'Where is the Dean?', query: 'Where is the Dean office located?' },
       { label: 'Emergency procedure', query: 'What is the campus emergency procedure?' },
-      { label: 'Staff directory', query: 'Who is in the staff directory?' },
-      { label: 'Student wellbeing', query: 'What wellbeing support is available?' },
+      { label: 'Campus map', query: 'What is on each floor of the building?' },
     ];
   }
   return [
     { label: 'Book a study room', query: 'How do I book a study room?' },
+    { label: 'Find the library', query: 'Which floor is the library on?' },
     { label: 'Academic calendar', query: 'What are the key academic calendar dates?' },
-    { label: 'Get academic support', query: 'How do I get academic support or a tutor?' },
-    { label: 'I lost something', query: 'How do I report or find a lost item?' },
+    { label: 'Financial support', query: 'Where can I find financial support?' },
   ];
 }

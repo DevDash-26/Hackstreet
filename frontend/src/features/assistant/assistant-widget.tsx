@@ -24,6 +24,7 @@ export function AssistantWidget() {
   const messages = useChatStore((s) => s.messages);
   const pending = useChatStore((s) => s.pending);
   const setOpen = useChatStore((s) => s.setOpen);
+  const clear = useChatStore((s) => s.clear);
   const send = useChatStore((s) => s.send);
   const setPending = useChatStore((s) => s.setPending);
 
@@ -75,7 +76,10 @@ export function AssistantWidget() {
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                clear();
+              }}
               className="text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
               aria-label="Minimise assistant"
             >

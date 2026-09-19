@@ -9,6 +9,7 @@ import { SectionFeedPage } from '@/features/sections/section-feed-page';
 import { AdminFinancePage } from '@/features/finance/finance-analytics';
 import { AdminNotificationComposer } from '@/features/whatsapp/composer';
 import { BookingGridPage } from '@/features/bookings/booking-grid';
+import { ProfilePage } from '@/features/profile/profile-page';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -55,6 +56,10 @@ export function PortalSectionPage() {
 
   if (section === 'bookings') {
     return <BookingGridPage />;
+  }
+
+  if (section === 'profile') {
+    return <ProfilePage />;
   }
 
   const feed = getSectionFeed(section);

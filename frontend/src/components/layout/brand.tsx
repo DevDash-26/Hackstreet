@@ -14,8 +14,8 @@ export function Crest({ className }: { className?: string }) {
 }
 
 export function Brand({
-  title = 'University Portal',
-  subtitle = 'UCL Campus Portal',
+  title = 'Campus Portal',
+  subtitle = 'UCL Sri Lanka',
   className,
 }: {
   title?: string;
