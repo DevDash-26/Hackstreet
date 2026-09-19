@@ -1,173 +1,321 @@
 # UCL University Student Portal
 
-A single platform giving students, staff, and parents unified access to university
-life: announcements, events, societies, academic calendars, room bookings, support
-services, and an AI assistant. Built as an npm-workspaces monorepo with a
-React + TypeScript SPA and a small Express API; Supabase (Auth + PostgreSQL + RLS)
-is the optional production backend.
+A role-based university portal prototype for students, academic staff, administrators, and parents. The project is structured as a TypeScript monorepo and demonstrates a modern campus experience with dashboards, announcements, bookings, onboarding, profile management, and an AI assistant.
 
-## 1. Overview
+## Project overview
 
-- **Unified access (BR1)** — one login page with four persona roles that route to a
-  role-aware dashboard and navigation tree.
-- **33 business requirements** are surfaced as browsable, interactive sections
-  (feed pages with interest / join / book / claim / request / save actions) plus
-  role-specific dashboards. See `docs/requirements/business-requirements.md`.
-- **Profile management** — every persona gets a real profile editor with
-  role-specific sections (academic record, employment & research, admin access,
-  ward details), persisted per persona.
-- **Demo-first** — the app runs fully without any backend or credentials using a
-  persisted "persona" session and mock data. Supabase can be enabled for real auth.
+This application is designed around a single portal experience where different user personas land on role-specific views after login. The codebase is intentionally built as a demo-first system: it works with mock/demo session data out of the box, while also including optional Supabase and server-side AI integration for future production use.
 
-## 2. Feature highlights
+The product is centered around the following user goals:
 
-| Area                   | What is implemented                                                             |
-| ---------------------- | ------------------------------------------------------------------------------- |
-| Authentication & roles | Login personas, `AuthProvider` (Supabase-ready), role-aware routing and nav     |
-| Dashboards             | Student, academic staff, society staff, admin, parent dashboards                |
-| Content sections       | 30+ sections backed by `features/sections/data.ts` (feeds, tags, meta, actions) |
-| Room booking (BR8)     | Interactive booking grid with validation, persisted to localStorage             |
-| Profile editing        | Per-persona profile manager with role-specific sections and per-persona saves   |
-| AI assistant (BR33)    | "Mr. Damith" chat widget: live model when configured, mock fallback, campus floor map |
-| Admin tools            | Finance analytics, WhatsApp targeted-message composer, notification centre      |
-| Onboarding (BR14)      | Goal-gradient setup checklist                                                   |
-| Theming                | Light / dark / system theme with persisted preference                           |
+- Give users one place to access university services and information
+- Show different views depending on role and permissions
+- Provide a polished portal experience for campus life
+- Demonstrate AI assistance within an educational context
+- Support future integration with real authentication and persistent backend data
 
-## 3. Technology stack
+## What is implemented
 
-| Layer                | Technology                                            |
-| -------------------- | ----------------------------------------------------- |
-| Frontend             | React 19, TypeScript, Vite, Tailwind v4, Zustand      |
-| UI primitives        | `@base-ui/react` (shadcn-style components)            |
-| Backend              | Node.js, Express 5, TypeScript                        |
-| Validation           | Zod (backend environment config)                      |
-| Backend-as-a-service | Supabase (Auth, PostgreSQL, RLS) — optional           |
-| Tooling              | npm workspaces, ESLint (flat config), Prettier, `tsx` |
+### 1. Role-based login experience
+The app includes a persona-based sign-in screen with demo users for:
 
-## 4. Architecture
+- Student
+- Lecturer / Academic Staff
+- Administrator
+- Parent
 
-```
+This is implemented in `frontend/src/pages/login.tsx` and routed through the app router in `frontend/src/app/router/index.tsx`.
+
+### 2. Role-specific dashboards
+Each persona lands on a different dashboard:
+
+- `frontend/src/pages/dashboards/lecturer-dashboard.tsx`
+- `frontend/src/pages/dashboards/admin-dashboard.tsx`
+- `frontend/src/pages/dashboards/parent-dashboard.tsx`
+- `frontend/src/pages/portal-home.tsx` selects the correct dashboard based on the active role
+
+The role model is centralized in `shared/src/constants/roles.ts`.
+
+### 3. Portal shell and section-based navigation
+The app uses a portal shell with section-level pages and role-aware routing:
+
+- `frontend/src/components/layout/portal-shell.tsx`
+- `frontend/src/pages/portal.tsx`
+- `frontend/src/pages/portal-section.tsx`
+- `frontend/src/features/sections/data.ts`
+
+This provides a feed-style section system for information such as announcements, support, events, academic content, and other university activities.
+
+### 4. Booking and operations features
+The repository includes functionality for booking-related interactions and campus operations, including a booking grid and administrative views for facility management.
+
+Relevant code:
+
+- `frontend/src/features/bookings/booking-grid.tsx`
+- `frontend/src/features/bookings/store.ts`
+- `frontend/src/pages/dashboards/admin-dashboard.tsx`
+
+### 5. Profile and personalization
+The app includes profile-based data and user state management for each persona.
+
+Relevant code:
+
+- `frontend/src/features/profile/profile-page.tsx`
+- `frontend/src/features/profile/profile-store.ts`
+- `frontend/src/features/profile/profile-definitions.ts`
+
+### 6. AI assistant
+There is a built-in assistant experience called "Mr. Damith" which is designed to assist with campus-related queries.
+
+Relevant code:
+
+- `frontend/src/features/assistant/assistant-widget.tsx`
+- `backend/src/routes/ai.ts`
+- `backend/src/services/ai-provider.ts`
+- `backend/src/services/ai-prompt.ts`
+
+The AI call is server-side and expects an OpenAI-compatible provider. If the backend is not configured, the app falls back to a mock response path.
+
+### 7. Admin and communication tools
+The system includes admin-style management experiences such as:
+
+- finance analytics
+- notifications
+- WhatsApp message composer
+- onboarding checklist
+- announcement and issue tracking
+
+Relevant code:
+
+- `frontend/src/features/finance/finance-analytics.tsx`
+- `frontend/src/features/onboarding/setup-checklist.tsx`
+- `frontend/src/features/whatsapp/composer.tsx`
+- `frontend/src/app/store/notifications.ts`
+
+## Tech stack
+
+### Frontend
+- React 19
+- TypeScript
+- Vite
+- React Router
+- Zustand
+- Tailwind CSS v4
+- shadcn-style UI primitives using `@base-ui/react`
+- Lucide icons
+
+### Backend
+- Node.js
+- Express 5
+- TypeScript
+- Zod validation
+- Helmet security middleware
+
+### Data / backend services
+- Supabase
+  - Auth
+  - PostgreSQL
+  - Row Level Security (RLS)
+- SQL migrations stored under `supabase/migrations/`
+
+### Shared / tooling
+- npm workspaces monorepo
+- TypeScript shared package
+- ESLint
+- Prettier
+- tsx
+- concurrently
+
+### AI integration
+- OpenAI-compatible backend integration through Express
+- Configurable via environment variables
+- Defaulted to a Groq-like model configuration described in the project docs
+
+## Architecture
+
+The repository is organized as a multi-package app:
+
+```text
 university-portal/
-├── frontend/      React SPA (features/, pages/, components/, app/, services/)
-├── backend/       Express API (currently health/liveness only)
-├── shared/        Role catalogue + app constants shared by all workspaces
-├── supabase/      Migrations + seed for the optional Supabase backend
-├── scripts/       Env checks, Supabase type generation
-├── docs/          Requirements, architecture, security, AI design
-└── package.json   Workspaces + root scripts
+├── frontend/        React + TypeScript SPA
+├── backend/         Express API
+├── shared/          Shared constants and role definitions
+├── supabase/        Database migrations and seed data
+├── scripts/         Environment and type-generation helpers
+├── docs/            Requirements, architecture, AI docs, and reports
+├── package.json     Workspace configuration and root scripts
+├── README.md
+└── .gitignore
 ```
 
-- **Frontend** is a feature-based SPA. Routing lives in `app/router`, role-aware
-  layout in `components/layout`, and business data in `features/<domain>/`.
-- **Backend** is a stateless Express service exposing `GET /api/v1/health` and
-  `POST /api/v1/assistant` (AI assistant, optional). It is a deliberate seam: feature routers can be mounted under `backend/src/` as the
-  hosted (service-role) surface grows.
-- **Shared** is built to `dist/` before the other workspaces typecheck or run.
+### Frontend architecture
+The frontend follows a feature-driven structure:
 
-Full details: `docs/architecture/architecture.md`.
+- `src/app/` for app setup, router, state providers
+- `src/components/` for reusable UI and layout
+- `src/features/` for business-specific feature modules
+- `src/pages/` for route-level screens and dashboards
+- `src/services/` for API integration
 
-## 5. Getting started
+### Backend architecture
+The backend is intentionally lightweight and modular:
+
+- `backend/src/app.ts` creates the Express app
+- `backend/src/routes/ai.ts` exposes assistant routes
+- `backend/src/services/` holds provider logic and prompt-building logic
+- `backend/src/middleware/` contains request logging, error handling, and 404 handling
+
+### Shared layer
+The shared package centralizes cross-app rules and constants, especially for role definitions.
+
+## Role model
+
+The app is built around the following personas:
+
+- `student`
+- `staff_academic`
+- `staff_society`
+- `admin`
+- `parent`
+
+Defined in:
+
+- `shared/src/constants/roles.ts`
+
+This role model is used by routing and access checks throughout the app.
+
+## Demo and local execution
+
+### Prerequisites
+- Node.js 18+
+- npm
+
+### Install dependencies
 
 ```bash
 npm install
-npm run dev            # builds shared, then runs frontend + backend together
 ```
 
-- Frontend: http://localhost:5173
-- Backend health: http://localhost:4000/api/v1/health
-
-The app is usable immediately in demo mode. To enable real Supabase auth:
+### Run the app locally
 
 ```bash
-cp frontend/.env.example frontend/.env.local   # fill in Supabase values
+npm run dev
 ```
 
-## 6. Environment variables
+This starts the backend and frontend together.
 
-Frontend (`frontend/.env.local`, optional — falls back to demo mode):
-
-| Variable                        | Description                         |
-| ------------------------------- | ----------------------------------- |
-| `VITE_SUPABASE_URL`             | `https://<project-ref>.supabase.co` |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Publishable (anon) key              |
-
-Backend (`backend/.env`, optional):
-
-| Variable           | Description                                                                  |
-| ------------------ | ---------------------------------------------------------------------------- |
-| `NODE_ENV`         | Default `development`                                                        |
-| `PORT`             | Default `4000`                                                               |
-| `AI_API_KEY`       | Provider API key (empty = canned frontend mock is used)                      |
-| `AI_PROVIDER_URL`  | OpenAI-compatible base URL; default Groq `https://api.groq.com/openai/v1`    |
-| `AI_MODEL`         | Model to call, default `llama-3.3-70b-versatile` (Groq free tier)            |
-| `AI_TIMEOUT_MS`    | Provider call timeout, default `15000`                                       |
-
-`.env*` files are gitignored; only `.env.example` files are committed. Run
-`npm run check:env` to print the resolved configuration.
-
-## 7. Development commands
-
-| Command                                        | Action                                               |
-| ---------------------------------------------- | ---------------------------------------------------- |
-| `npm run dev`                                  | Build `shared`, run backend (4000) + frontend (5173) |
-| `npm run dev:backend` / `npm run dev:frontend` | Start one side                                       |
-| `npm run build`                                | Build `shared`, frontend, then backend               |
-| `npm run typecheck`                            | Typecheck all workspaces                             |
-| `npm run lint` / `npm run lint:fix`            | ESLint                                               |
-| `npm run format` / `npm run format:check`      | Prettier                                             |
-| `npm run check:env`                            | Print resolved `.env` configuration                  |
-
-## 8. Database / Supabase (optional)
-
-Migrations are plain SQL under `supabase/migrations/` and run through the Supabase
-CLI. `20260919000000_rbac_announcements.sql` defines the active `user_roles` +
-`announcements` model and RLS policies.
+### Individual services
 
 ```bash
-npm run supabase:start             # local stack (Docker)
-npm run supabase:types             # regenerate TS types (needs SUPABASE_PROJECT_ID)
+npm run dev:backend
+npm run dev:frontend
+```
+
+### Frontend URL
+- http://localhost:5173
+
+### Backend health endpoint
+- http://localhost:4000/api/v1/health
+
+## Demo login personas
+
+The app includes pre-filled demo credentials for mock sign-ins. This is intentional demo mode and is defined in `frontend/src/pages/login.tsx`.
+
+Example personas:
+
+- Student: `nimal.perera@ucl.ac.lk` / `demo1234`
+- Lecturer: `sanjaya.s@ucl.ac.lk` / `demo1234`
+- Administrator: `priyanka.s@ucl.ac.lk` / `demo1234`
+- Parent: `sharon.p@email.lk` / `demo1234`
+
+## Environment variables
+
+### Frontend (optional)
+If using Supabase auth or live backend services, add a local env file:
+
+```bash
+cp frontend/.env.example frontend/.env.local
+```
+
+Required variables may include:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+### Backend (optional)
+The backend supports optional AI configuration:
+
+- `NODE_ENV`
+- `PORT`
+- `AI_API_KEY`
+- `AI_PROVIDER_URL`
+- `AI_MODEL`
+- `AI_TIMEOUT_MS`
+
+The project includes `.env.example` files and a script to check resolved environment values:
+
+```bash
+npm run check:env
+```
+
+## Database and Supabase setup
+
+The repo includes a Supabase configuration and migration files:
+
+- `supabase/config.toml`
+- `supabase/migrations/`
+- `supabase/seed.sql`
+
+This is a strong sign that the app is planned to evolve from a mock/demo system into a production-ready role-based portal with real data and security rules.
+
+Useful scripts:
+
+```bash
+npm run supabase:start
+npm run supabase:types
 npm run supabase:stop
 ```
 
-Seed data lives in `supabase/seed.sql`. See `docs/architecture/database.md`.
+## Verification and current state
 
-## 9. Roles
-
-The single source of truth is `shared/src/constants/roles.ts`:
-
-| Role             | Scope                                |
-| ---------------- | ------------------------------------ |
-| `student`        | Student-facing features              |
-| `staff_academic` | Academic content + academic calendar |
-| `staff_society`  | Society content + activities         |
-| `admin`          | Portal administration                |
-| `parent`         | Guardian view of student information |
-
-See `docs/security/access-control.md`.
-
-## 10. Testing & validation
-
-There is no automated test runner in this scope. Every change is validated with:
+The project includes standard validation scripts:
 
 ```bash
-npm run lint
-npm run typecheck
 npm run build
+npm run typecheck
+npm run lint
 ```
 
-and a dev-server smoke test of `/` and the public assets.
+This project is best understood as a polished prototype / MVP rather than a fully productionized university system. The readme and codebase clearly show that the app is designed to demonstrate a concept and provide a reusable architecture for real deployment later.
 
-## 11. Known limitations
+## Key documentation
 
-- The AI assistant calls the backend (`POST /api/v1/assistant`), which forwards to a
-  configurable OpenAI-compatible provider with the key kept server-side. Without a
-  key it falls back to the canned, keyword-driven mock (including the University
-  College Sri Lanka floor map). The conversation resets to the welcome message when
-  the widget is closed.
-- Profile edits persist to `localStorage` per persona; closing the assistant
-  clears its chat history.
-- WhatsApp delivery (`frontend/src/services/whatsapp.ts`) is a stub.
-- Business requirements are demonstrated with client-side mock data; a subset maps
-  to the Supabase `announcements` table.
-- The backend exposes a health endpoint and the optional AI assistant endpoint;
-  service-role write paths are not yet implemented.
+The repository includes design and product docs under `docs/`:
+
+- `docs/requirements/business-requirements.md`
+- `docs/requirements/non-functional-requirements.md`
+- `docs/architecture/architecture.md`
+- `docs/architecture/database.md`
+- `docs/security/access-control.md`
+- `docs/ai/ai-architecture.md`
+- `docs/report/DevDash26-report.md`
+
+## Presentation summary
+
+This project is a modern university portal MVP built with a TypeScript monorepo approach. It combines a role-based frontend experience, a lightweight Express backend, and optional Supabase integration to demonstrate how a university ecosystem can unify login, dashboards, booking, communication, and AI assistance into one digital portal.
+
+It is especially suitable for presentations because it shows:
+
+- a complete product vision
+- strong frontend UX design
+- real role-based portal behavior
+- modern full-stack architecture
+- optional AI and data integration paths
+- maintainable modular structure
+
+## Notes
+
+- The app works immediately in demo mode without external credentials.
+- Real auth and database connectivity are optional and can be enabled through Supabase.
+- AI assistant support is present but requires backend configuration to operate with a live provider.
+
