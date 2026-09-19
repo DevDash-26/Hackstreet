@@ -13,6 +13,9 @@ is the optional production backend.
 - **33 business requirements** are surfaced as browsable, interactive sections
   (feed pages with interest / join / book / claim / request / save actions) plus
   role-specific dashboards. See `docs/requirements/business-requirements.md`.
+- **Profile management** — every persona gets a real profile editor with
+  role-specific sections (academic record, employment & research, admin access,
+  ward details), persisted per persona.
 - **Demo-first** — the app runs fully without any backend or credentials using a
   persisted "persona" session and mock data. Supabase can be enabled for real auth.
 
@@ -24,7 +27,8 @@ is the optional production backend.
 | Dashboards             | Student, academic staff, society staff, admin, parent dashboards                |
 | Content sections       | 30+ sections backed by `features/sections/data.ts` (feeds, tags, meta, actions) |
 | Room booking (BR8)     | Interactive booking grid with validation, persisted to localStorage             |
-| AI assistant (BR33)    | "Mr. Damith" chat widget with role-aware suggestions; pluggable provider (mock) |
+| Profile editing        | Per-persona profile manager with role-specific sections and per-persona saves   |
+| AI assistant (BR33)    | "Mr. Damith" chat widget with role-aware suggestions and campus floor map       |
 | Admin tools            | Finance analytics, WhatsApp targeted-message composer, notification centre      |
 | Onboarding (BR14)      | Goal-gradient setup checklist                                                   |
 | Theming                | Light / dark / system theme with persisted preference                           |
@@ -151,8 +155,12 @@ and a dev-server smoke test of `/` and the public assets.
 
 ## 11. Known limitations
 
-- The AI assistant (`frontend/src/services/ai.ts`) is a deterministic mock; wire a
-  provider by replacing the function body.
+- The AI assistant (`frontend/src/services/ai.ts`) is a deterministic mock with
+  canned, keyword-driven answers — including the University College Sri Lanka floor
+  map — and the conversation resets to the welcome message when the widget is
+  closed. Wire a provider by replacing the function body.
+- Profile edits persist to `localStorage` per persona; closing the assistant
+  clears its chat history.
 - WhatsApp delivery (`frontend/src/services/whatsapp.ts`) is a stub.
 - Business requirements are demonstrated with client-side mock data; a subset maps
   to the Supabase `announcements` table.
